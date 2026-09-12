@@ -41,10 +41,30 @@ class SharonExchange:
 class ErieExchange:
     """Inbound: ERIE -> ELLE."""
 
+    REQUIRED_FIELDS = ("source", "kind")
+
     def __init__(self) -> None:
         self._queue: list[dict[str, Any]] = []
 
     def accept(self, envelope: dict[str, Any]) -> str:
+        if not isinstance(envelope, dict):
+            raise ValueError(
+                f"envelope must be a dict, got {type(envelope).__name__}"
+            )
+        missing = [name for name in self.REQUIRED_FIELDS if name not in envelope]
+        if missing:
+            raise ValueError(
+                f"envelope missing required field(s): {', '.join(missing)}"
+            )
+        for name in self.REQUIRED_FIELDS:
+            value = envelope[name]
+            if not isinstance(value, str) or not value:
+                raise ValueError(
+                    f"envelope field {name!r} must be a non-empty string"
+                )
+        payload = envelope.get("payload")
+        if payload is not None and not isinstance(payload, dict):
+            raise ValueError("envelope field 'payload' must be a dict when present")
         self._queue.append(dict(envelope))
         return "accepted"
 

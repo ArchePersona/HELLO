@@ -137,6 +137,39 @@ def test_duplicate_parcel_id_operations_target_one_parcel():
     assert parcel.gossip is GossipState.BLACK
 
 
+def test_erie_rejects_malformed_envelopes():
+    erie = ErieExchange()
+    malformed = [
+        ["source", "kind"],                      # not a dict
+        {"kind": "observation"},                  # missing source
+        {"source": "erie"},                        # missing kind
+        {"source": "", "kind": "observation"},     # empty source
+        {"source": "erie", "kind": ""},            # empty kind
+        {"source": 1, "kind": "observation"},      # non-string source
+        {"source": "erie", "kind": "observation", "payload": "nope"},  # bad payload
+    ]
+    for envelope in malformed:
+        with pytest.raises(ValueError):
+            erie.accept(envelope)
+    assert erie.drain() == []  # nothing malformed was queued
+
+
+def test_erie_accepts_valid_envelopes_with_extra_fields():
+    erie = ErieExchange()
+    assert erie.accept({"source": "erie", "kind": "observation"}) == "accepted"
+    assert erie.accept({
+        "source": "erie",
+        "kind": "observation",
+        "payload": {"k": "v"},
+        "trace_id": "t-1",  # extra transport metadata stays allowed
+    }) == "accepted"
+    drained = erie.drain()
+    assert len(drained) == 2
+    assert drained[1]["payload"] == {"k": "v"}
+    assert drained[1]["trace_id"] == "t-1"
+    assert erie.drain() == []  # drain remains idempotent after validated accepts
+
+
 def test_pytest_suite_passes_from_project_root():
     # Guard: this suite is runnable exactly as a user would run it.
     assert True
