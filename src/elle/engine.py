@@ -95,8 +95,10 @@ class ELLEEngine:
 
     def lineage(self, parcel_id: str) -> list[str]:
         chain: list[str] = []
+        visited: set[str] = set()
         current = find_parcel(self.parcels, parcel_id)
-        while current is not None:
+        while current is not None and current.parcel_id not in visited:
+            visited.add(current.parcel_id)
             chain.append(current.parcel_id)
             parents = current.ancestry
             current = find_parcel(self.parcels, parents[0]) if parents else None
