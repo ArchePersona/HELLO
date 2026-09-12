@@ -37,8 +37,11 @@ class ELLEEngine:
 
     def open_parcel(self, parcel_id: str | None = None,
                     ancestry: Iterable[str] = ()) -> WorkParcel:
+        resolved_id = parcel_id or f"parcel-{uuid.uuid4().hex[:10]}"
+        if find_parcel(self.parcels, resolved_id) is not None:
+            raise ValueError(f"parcel id already exists: {resolved_id}")
         parcel = WorkParcel(
-            parcel_id=parcel_id or f"parcel-{uuid.uuid4().hex[:10]}",
+            parcel_id=resolved_id,
             ancestry=list(ancestry),
         )
         self.parcels.append(parcel)

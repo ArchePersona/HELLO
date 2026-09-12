@@ -86,6 +86,26 @@ def test_ancestry_tracking():
     assert engine.ancestry_of(child) == ["a"]
 
 
+def test_lineage_terminates_on_cyclic_ancestry():
+    engine = ELLEEngine()
+    engine.open_parcel("a", ancestry=["b"])
+    engine.open_parcel("b", ancestry=["a"])
+    assert engine.lineage("a") == ["b", "a"]
+
+
+def test_lineage_terminates_on_self_parent():
+    engine = ELLEEngine()
+    engine.open_parcel("s", ancestry=["s"])
+    assert engine.lineage("s") == ["s"]
+
+
+def test_duplicate_parcel_id_rejected():
+    engine = ELLEEngine()
+    engine.open_parcel("dup")
+    with pytest.raises(ValueError):
+        engine.open_parcel("dup")
+
+
 def test_sharon_erie_exchange_interface():
     sink = MemorySink()
     sharon = SharonExchange(sink)
@@ -105,6 +125,16 @@ def test_sharon_erie_exchange_interface():
     drained = erie.drain()
     assert len(drained) == 1 and drained[0]["kind"] == "observation"
     assert erie.drain() == []
+
+
+def test_duplicate_parcel_id_operations_target_one_parcel():
+    # With duplicates rejected, id lookup always targets the caller's parcel.
+    engine = ELLEEngine()
+    parcel = engine.open_parcel("solo")
+    engine.activate("solo")
+    engine.settle("solo", verified=True)
+    assert parcel.stage is ParcelStage.SETTLED
+    assert parcel.gossip is GossipState.BLACK
 
 
 def test_pytest_suite_passes_from_project_root():
